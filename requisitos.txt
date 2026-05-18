@@ -1,4 +1,0 @@
-fpdf
-pandas
-Pillow
-pypdf
