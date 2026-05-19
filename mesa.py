@@ -11,14 +11,9 @@ import time
 import uuid
 from pypdf import PdfWriter
 
-# --- RADAR DE LOGOTIPO (DIAGNÓSTICO) ---
-archivos_sistema = os.listdir()
-logo_final = None
-for archivo in archivos_sistema:
-    # Busca cualquier archivo que contenga "logo" (ignorando si es .py)
-    if "logo" in archivo.lower() and not archivo.endswith(".py"):
-        logo_final = archivo
-        break
+# --- RUTAS PARA LA NUBE (LOGOTIPO) ---
+# Apuntamos directamente a tu archivo exacto en GitHub
+LOGO_PATH = "logo.png"
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BESCO | App Damian", layout="wide")
@@ -33,26 +28,23 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 class BESCO_PDF(FPDF):
-    def __init__(self, ruta_logo):
+    def __init__(self):
         super().__init__()
         self.section_count = 1
-        self.ruta_logo = ruta_logo
 
     def header(self):
-        # 1. Intenta dibujar el logo si el radar lo encontró
-        if self.ruta_logo and os.path.exists(self.ruta_logo):
+        # BLINDAJE PARA PNG: Lo convertimos a RGB puro para que fpdf no explote con transparencias
+        if os.path.exists(LOGO_PATH):
             try:
-                img_logo = Image.open(self.ruta_logo).convert("RGB")
-                temp_logo = "temp_header_seguro_app.jpg"
+                img_logo = Image.open(LOGO_PATH).convert("RGB")
+                temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
                 self.image(temp_logo, x=10, y=8, h=25)
             except Exception as e:
-                # Si el archivo no es una imagen válida o está corrupto, imprime este aviso en el PDF
                 self.set_font('Arial', 'I', 8)
                 self.set_xy(10, 10)
-                self.cell(0, 10, f"(Error de imagen: el archivo '{self.ruta_logo}' está dañado o no es compatible)")
+                self.cell(0, 10, "(Error: No se pudo procesar logo.png)")
                 
-        # 2. Textos del encabezado
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
         self.set_xy(100, 15)
@@ -135,12 +127,6 @@ def enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nombre_archivo, 
 # --- INTERFAZ ---
 st.title("📑 Sistema de Evidencia Técnica BESCO - App Damian")
 
-# --- MENSAJE DEL RADAR PARA EL ADMINISTRADOR ---
-if logo_final:
-    st.caption(f"✅ Radar de sistema: Logotipo detectado en GitHub como **'{logo_final}'**")
-else:
-    st.error("❌ Radar de sistema: No se encontró ningún archivo de logotipo en GitHub. Asegúrate de subirlo.")
-
 st.subheader("1. Identificación General del Servicio")
 c_g1, c_g2, c_g3, c_g4 = st.columns([2, 1, 1, 1.5])
 cliente = c_g1.text_input("Cliente")
@@ -219,8 +205,7 @@ correos_extra = st.text_input("Correos adicionales (separados por coma)")
 
 if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
     with st.spinner("Construyendo documento PDF y procesando imágenes..."):
-        # Se le pasa la variable del radar al generador de PDF
-        pdf = BESCO_PDF(logo_final)
+        pdf = BESCO_PDF()
         pdf.add_page()
         
         pdf.add_custom_section("Información General")
