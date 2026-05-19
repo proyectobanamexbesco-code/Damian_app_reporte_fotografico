@@ -11,8 +11,14 @@ import time
 import uuid
 from pypdf import PdfWriter
 
-# --- RUTAS PARA LA NUBE ---
-LOGO_PATH = "logo"
+# --- RUTAS PARA LA NUBE (LOGOTIPO) ---
+LOGO_PATH = "Logo"
+# Buscador inteligente en caso de que el archivo tenga extensión oculta
+if not os.path.exists(LOGO_PATH):
+    for ext in [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]:
+        if os.path.exists(f"Logo{ext}"):
+            LOGO_PATH = f"Logo{ext}"
+            break
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BESCO | App Damian", layout="wide")
@@ -207,6 +213,7 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
     pdf.set_font('Arial', '', 10)
     pdf.cell(0, 7, f"Servicio: {tipo_serv} ({referencia})", 0, 1); pdf.ln(5)
 
+    # --- REORDENAMIENTO ESTRICTO EN EL PDF ---
     for eq in equipos_data:
         if pdf.get_y() > 240: pdf.add_page()
         pdf.add_custom_section(f"EQUIPO {eq['numero']}: {eq['esp']}")
