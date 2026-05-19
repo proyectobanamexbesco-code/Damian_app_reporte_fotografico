@@ -11,9 +11,6 @@ import time
 import uuid
 from pypdf import PdfWriter
 
-# --- RUTAS PARA LA NUBE (LOGOTIPO) ---
-LOGO_PATH = "logo.jpg"
-
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BESCO | App Damian", layout="wide")
 
@@ -32,11 +29,24 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        if os.path.exists(LOGO_PATH):
+        # --- BLINDAJE ABSOLUTO DEL LOGOTIPO ---
+        # 1. Buscamos cualquier archivo que se parezca a tu logo
+        logo_encontrado = None
+        posibles_nombres = ["logo.jpg", "logo.jpeg", "logo.png", "Logo.jpg", "Logo.png", "logo"]
+        for nombre in posibles_nombres:
+            if os.path.exists(nombre):
+                logo_encontrado = nombre
+                break
+        
+        # 2. Si lo encuentra, lo purifica a JPEG estándar antes de imprimirlo
+        if logo_encontrado:
             try:
-                self.image(LOGO_PATH, x=10, y=8, h=25)
+                img_logo = Image.open(logo_encontrado).convert("RGB")
+                temp_logo = "temp_logo_seguro.jpg"
+                img_logo.save(temp_logo, format="JPEG")
+                self.image(temp_logo, x=10, y=8, h=25)
             except Exception:
-                pass 
+                pass # Si el archivo está corrupto, lo ignora para no colapsar la app
                 
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
