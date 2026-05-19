@@ -15,7 +15,7 @@ from pypdf import PdfWriter
 LOGO_PATH = "logo.png"
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="BESCO | App Damian", layout="wide")
+st.set_page_config(page_title="Alducin | Evidencia Técnica", layout="wide")
 
 st.markdown("""
     <style>
@@ -32,7 +32,7 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        # BLINDAJE PARA PNG: Lo convertimos a RGB puro
+        # BLINDAJE PARA PNG: Convertir a RGB puro
         if os.path.exists(LOGO_PATH):
             try:
                 img_logo = Image.open(LOGO_PATH).convert("RGB")
@@ -46,7 +46,7 @@ class BESCO_PDF(FPDF):
                 final_w = orig_w * escala
                 
                 self.image(temp_logo, x=10, y=8, w=final_w, h=final_h)
-            except Exception as e:
+            except Exception:
                 self.set_font('Arial', 'I', 8)
                 self.set_xy(10, 10)
                 self.cell(0, 10, f"(Error: No se pudo procesar logo.png)")
@@ -54,7 +54,7 @@ class BESCO_PDF(FPDF):
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
         self.set_xy(100, 15)
-        self.cell(0, 10, 'REPORTE DE SERVICIO TÉCNICO - APP DAMIAN', 0, 1, 'R')
+        self.cell(0, 10, 'ALDUCIN AIRE ACONDICIONADO INDUSTRIAL', 0, 1, 'R')
         self.set_font('Arial', '', 9)
         self.set_x(100)
         self.cell(0, 5, f"Emisión del Reporte: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
@@ -108,17 +108,17 @@ class BESCO_PDF(FPDF):
             final_w, final_h = img_w * escala, img_h * escala
             self.image(temp_folio, x=10 + (190 - final_w) / 2, y=self.get_y() + 5, w=final_w, h=final_h)
 
-def enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nombre_archivo, correos_extra, fecha_ejec, lista_destinatarios):
+def enviar_correo(pdf_bytes, cliente, folio, sucursal, nombre_archivo, correos_extra, fecha_ejec, lista_destinatarios):
     try:
         remitente = st.secrets["EMAIL_SENDER"]
         password = st.secrets["EMAIL_PASSWORD"]
         destinatarios = list(set(lista_destinatarios + ([c.strip() for c in correos_extra.split(",")] if correos_extra else [])))
 
         msg = EmailMessage()
-        msg['Subject'] = f"Reporte Fotográfico BESCO (Damian): {cliente} | TK: {folio} | Of: {oficina}"
+        msg['Subject'] = f"Reporte Fotográfico Alducin: {cliente} | TK: {folio}"
         msg['From'] = remitente
         msg['To'] = ", ".join(destinatarios) 
-        msg.set_content(f"Se ha generado un nuevo reporte múltiple desde la App Damian.\n\nFecha Ejecución: {fecha_ejec}\nOficina: {oficina}\nCliente: {cliente}\nFolio: {folio}\nSucursal: {sucursal}")
+        msg.set_content(f"Se ha generado un nuevo reporte desde el Sistema de Evidencia Técnica Alducin.\n\nFecha Ejecución: {fecha_ejec}\nCliente: {cliente}\nFolio: {folio}\nSucursal: {sucursal}")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
@@ -131,30 +131,26 @@ def enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nombre_archivo, 
         return False
 
 # --- INTERFAZ ---
-st.title("📑 Sistema de Evidencia Técnica BESCO - App Damian")
+st.title("📑 Sistema de Evidencia Técnica Alducin Aire Acondicionado Industrial")
 
 st.subheader("1. Identificación General del Servicio")
-c_g1, c_g2, c_g3, c_g4 = st.columns([2, 1, 1, 1.5])
+c_g1, c_g2, c_g3 = st.columns([2, 1, 1.5])
 cliente = c_g1.text_input("Cliente")
 folio = c_g2.text_input("Folio / OT / TK")
-estado_op = c_g3.selectbox("Estado Global", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], index=4)
-fecha_ejecucion = c_g4.date_input("Fecha de Ejecución", datetime.now())
+fecha_ejecucion = c_g3.date_input("Fecha de Ejecución", datetime.now())
 
-col_loc1, col_loc2 = st.columns(2)
-sucursal = col_loc1.text_input("Sucursal / Inmueble")
-oficina = col_loc2.selectbox("Oficina Responsable", ["Acapulco", "Toluca", "Pachuca", "Michoacán", "Zonas/ CDMX", "CDMX", "Ben & Company", "BX+", "Emerson", "Odoo"])
+sucursal = st.text_input("Sucursal / Inmueble")
 
-c_t1, c_t2, c_t3, c_t4 = st.columns(4)
+c_t1, c_t2, c_t3 = st.columns(3)
 tecnico = c_t1.text_input("Técnico Asignado")
 supervisor = c_t2.text_input("Supervisor")
 tipo_serv = c_t3.selectbox("Servicio", ["Preventivo", "Correctivo", "Emergencia"])
-referencia = c_t4.selectbox("Referencia", ["Con Ticket", "Sin Ticket"])
 
 st.markdown("---")
 
 st.subheader("2. Evidencia Documental (Reporte Físico)")
-st.info("📌 Puede subir hasta 4 fotos (JPG/PNG) y/o archivos PDF del reporte firmado.")
-archivos_folio = st.file_uploader("Subir Folio BESCO", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
+st.info("📌 Puede subir hasta 4 fotos (JPG/PNG) y/o archivos PDF de la orden firmada y sellada.")
+archivos_folio = st.file_uploader("Subir Orden de Trabajo, firmada y Sellada por Cliente", type=["jpg", "jpeg", "png", "pdf"], accept_multiple_files=True)
 
 st.markdown("---")
 
@@ -194,26 +190,10 @@ df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_
 st.markdown("---")
 st.subheader("5. Envío de Reporte")
 
-mapeo_correos = {
-    "Acapulco": ["itzallana.vazquez@besco.mx", "gerardo.fuentes@besco.mx"],
-    "Toluca": ["policarpo.rosaliano@besco.mx", "monica.iniestra@besco.mx"],
-    "Pachuca": ["german.constantino@besco.mx"],
-    "Michoacán": ["cristobal.rodriguez@besco.mx", "ximena.acosta@besco.mx", "javier.zamano@besco.mx"],
-    "Zonas/ CDMX": ["german.constantino@besco.mx", "andres.mayagoitia@besco.mx", "brenda.cervantes@besco.mx"],
-    "CDMX": ["gerardo.mendez@besco.mx"],
-    "Ben & Company": ["gerardo.mendez@besco.mx"], "BX+": ["gerardo.mendez@besco.mx"], "Emerson": ["gerardo.mendez@besco.mx"], "Odoo": ["gerardo.mendez@besco.mx"]
-}
+# Destinatario único y obligatorio solicitado
+dest_oficina = ["damianaalducin@gmail.com"]
 
-# 1. Obtiene los correos regionales
-dest_oficina = mapeo_correos.get(oficina, ["gerardo.mendez@besco.mx"])
-
-# 2. Asegura que tú también lo recibas siempre (opcional, pero útil como respaldo)
-if "gerardo.mendez@besco.mx" not in dest_oficina: dest_oficina.append("gerardo.mendez@besco.mx")
-
-# 3. --- REGLA ESTRICTA DE DAMIAN: Recibe TODOS los reportes ---
-if "damianaalducin@gmail.com" not in dest_oficina: dest_oficina.append("damianaalducin@gmail.com")
-
-st.info(f"📧 Destinatarios automáticos: {', '.join(dest_oficina)}")
+st.info(f"📧 Destinatario automático: {', '.join(dest_oficina)}")
 correos_extra = st.text_input("Correos adicionales (separados por coma)")
 
 if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
@@ -225,13 +205,12 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
         pdf.set_font('Arial', '', 10)
         pdf.cell(0, 7, f"Cliente: {cliente} | Folio: {folio}", 0, 1)
         f_ejec_str = fecha_ejecucion.strftime('%d/%m/%Y')
-        pdf.cell(0, 7, f"Fecha de Ejecución: {f_ejec_str} | Oficina: {oficina}", 0, 1)
+        pdf.cell(0, 7, f"Fecha de Ejecución: {f_ejec_str}", 0, 1)
         if sucursal: pdf.cell(0, 7, f"Sucursal: {sucursal}", 0, 1)
         pdf.set_font('Arial', 'B', 10)
-        pdf.cell(0, 7, f"ESTADO GLOBAL DE OPERACIÓN: {estado_op}/10", 0, 1)
         pdf.cell(0, 7, f"Técnico: {tecnico} | Supervisor: {supervisor}", 0, 1)
         pdf.set_font('Arial', '', 10)
-        pdf.cell(0, 7, f"Servicio: {tipo_serv} ({referencia})", 0, 1); pdf.ln(5)
+        pdf.cell(0, 7, f"Servicio: {tipo_serv}", 0, 1); pdf.ln(5)
 
         for eq in equipos_data:
             if pdf.get_y() > 240: pdf.add_page()
@@ -264,7 +243,7 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
             for _, row in df_c.iterrows(): pdf.cell(30, 7, str(row["Cantidad"]), 1); pdf.cell(160, 7, str(row["Descripción"]), 1, 1)
 
         fotos_folio = [f for f in archivos_folio if f.type in ["image/jpeg", "image/png"]]
-        if fotos_folio: pdf.folio_grid("FOLIO BESCO", fotos_folio)
+        if fotos_folio: pdf.folio_grid("ORDEN DE TRABAJO", fotos_folio)
 
         pdf_bytes = pdf.output(dest='S').encode('latin-1')
 
@@ -275,13 +254,13 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
             for p in pdfs_folio: merger.append(p)
             out = io.BytesIO(); merger.write(out); pdf_bytes = out.getvalue()
 
-        nom_archivo = f"Reporte_BESCO_Damian_{cliente}_{folio}.pdf".replace(" ", "_")
+        nom_archivo = f"Reporte_Alducin_{cliente}_{folio}.pdf".replace(" ", "_")
         
-        correo_enviado = enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nom_archivo, correos_extra, f_ejec_str, dest_oficina)
+        correo_enviado = enviar_correo(pdf_bytes, cliente, folio, sucursal, nom_archivo, correos_extra, f_ejec_str, dest_oficina)
         
         if correo_enviado:
-            st.success(f"✅ Reporte enviado a {oficina} y listo para descargar.")
+            st.success("✅ Reporte enviado exitosamente y listo para descargar.")
         else:
-            st.warning("⚠️ El PDF se generó correctamente, pero hubo un error al enviarlo por correo. Puedes descargarlo aquí abajo:")
+            st.warning("⚠️ El PDF se generó correctamente, pero hubo un problema de envío. Descárgalo aquí abajo:")
         
     st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name=nom_archivo, mime="application/pdf")
