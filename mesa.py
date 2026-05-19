@@ -12,12 +12,12 @@ import uuid
 from pypdf import PdfWriter
 
 # --- RUTAS PARA LA NUBE (LOGOTIPO) ---
-LOGO_PATH = "Logo"
-# Buscador inteligente en caso de que el archivo tenga extensión oculta
+# Forzamos la búsqueda en minúsculas exactamente como está en tu GitHub
+LOGO_PATH = "logo"
 if not os.path.exists(LOGO_PATH):
     for ext in [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]:
-        if os.path.exists(f"Logo{ext}"):
-            LOGO_PATH = f"Logo{ext}"
+        if os.path.exists(f"logo{ext}"):
+            LOGO_PATH = f"logo{ext}"
             break
 
 # --- CONFIGURACIÓN DE PÁGINA ---
