@@ -33,17 +33,31 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        # BLINDAJE PARA PNG: Lo convertimos a RGB puro para que fpdf no explote con transparencias
+        # BLINDAJE PARA PNG: Lo convertimos a RGB puro
         if os.path.exists(LOGO_PATH):
             try:
                 img_logo = Image.open(LOGO_PATH).convert("RGB")
                 temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
-                self.image(temp_logo, x=10, y=8, h=25)
+                
+                # --- NUEVO: CÁLCULO MANUAL PARA MANTENER ASPECTO ---
+                # Obtenemos las dimensiones originales
+                orig_w, orig_h = img_logo.size
+                
+                # Definimos una altura objetivo (ej. 25 unidades de fpdf, usualmente mm)
+                final_h = 25
+                
+                # Calculamos el factor de escala y la anchura final
+                escala = final_h / orig_h
+                final_w = orig_w * escala
+                
+                # Dibujamos la imagen con anchura y altura calculadas
+                self.image(temp_logo, x=10, y=8, w=final_w, h=final_h)
             except Exception as e:
+                # Si algo falla, imprime un aviso en el PDF en lugar de colapsar la app
                 self.set_font('Arial', 'I', 8)
                 self.set_xy(10, 10)
-                self.cell(0, 10, "(Error: No se pudo procesar logo.png)")
+                self.cell(0, 10, f"(Error: No se pudo procesar logo.png)")
                 
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
