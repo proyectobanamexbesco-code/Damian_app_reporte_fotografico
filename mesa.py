@@ -32,12 +32,11 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        # BLINDAJE: Try/Except para que el PDF no explote si el logo tiene un formato extraño
         if os.path.exists(LOGO_PATH):
             try:
                 self.image(LOGO_PATH, x=10, y=8, h=25)
             except Exception:
-                pass # Si el logo falla, lo ignora y continúa creando el PDF
+                pass 
                 
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
@@ -66,7 +65,6 @@ class BESCO_PDF(FPDF):
             foto.seek(0)
             img = Image.open(foto).convert("RGB")
             temp_p = f"temp_{prefix}_{uuid.uuid4().hex}.jpg"
-            # BLINDAJE: Forzamos que se guarde estrictamente como JPEG
             img.save(temp_p, format="JPEG")
             
             col = i % 2
@@ -115,7 +113,6 @@ def enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nombre_archivo, 
             smtp.send_message(msg)
         return True
     except Exception as e:
-        # Se muestra un error visible si falla la conexión del correo
         st.error("❌ Ocurrió un problema al enviar el correo. Revise la configuración de sus contraseñas (Secrets).")
         print(e)
         return False
@@ -161,4 +158,110 @@ for i in range(num_equipos):
             cols = st.columns(4)
             meds['Succión'] = cols[0].text_input("Succión", key=f"s_{i}")
             meds['Descarga'] = cols[1].text_input("Descarga", key=f"d_{i}")
-            meds['Salida'] = cols[2].text_input("Salida", key=f"t_{
+            meds['Salida'] = cols[2].text_input("Salida", key=f"t_{i}")
+            meds['Amperaje'] = cols[3].text_input("Amp", key=f"a_{i}")
+        elif esp == "Otros":
+            otros = st.text_area("Detalles/Mediciones:", key=f"o_{i}")
+            
+        ca1, ca2, ca3 = st.columns(3)
+        tag = ca1.text_input("TAG", key=f"tg_{i}")
+        marca = ca2.text_input("Marca", key=f"mr_{i}")
+        cap = ca3.text_input("Capacidad", key=f"cp_{i}")
+        
+        com = st.text_area("Comentarios", key=f"com_{i}")
+        
+        fa = st.file_uploader("Fotos ANTES", accept_multiple_files=True, key=f"fa_{i}")
+        fd = st.file_uploader("Fotos DESPUÉS", accept_multiple_files=True, key=f"fd_{i}")
+        
+        equipos_data.append({"numero": i+1, "esp": esp, "meds": meds, "otros": otros, "tag": tag, "marca": marca, "cap": cap, "com": com, "fa": fa, "fd": fd})
+
+st.subheader("4. Materiales Utilizados")
+df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_rows="dynamic")
+
+st.markdown("---")
+st.subheader("5. Envío de Reporte")
+
+mapeo_correos = {
+    "Acapulco": ["itzallana.vazquez@besco.mx", "gerardo.fuentes@besco.mx"],
+    "Toluca": ["policarpo.rosaliano@besco.mx", "monica.iniestra@besco.mx"],
+    "Pachuca": ["german.constantino@besco.mx"],
+    "Michoacán": ["cristobal.rodriguez@besco.mx", "ximena.acosta@besco.mx", "javier.zamano@besco.mx"],
+    "Zonas/ CDMX": ["german.constantino@besco.mx", "andres.mayagoitia@besco.mx", "brenda.cervantes@besco.mx"],
+    "CDMX": ["gerardo.mendez@besco.mx"],
+    "Ben & Company": ["gerardo.mendez@besco.mx"], "BX+": ["gerardo.mendez@besco.mx"], "Emerson": ["gerardo.mendez@besco.mx"], "Odoo": ["gerardo.mendez@besco.mx"]
+}
+dest_oficina = mapeo_correos.get(oficina, ["gerardo.mendez@besco.mx"])
+if "gerardo.mendez@besco.mx" not in dest_oficina: dest_oficina.append("gerardo.mendez@besco.mx")
+
+st.info(f"📧 Destinatarios: {', '.join(dest_oficina)}")
+correos_extra = st.text_input("Correos adicionales (separados por coma)")
+
+if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
+    with st.spinner("Construyendo documento PDF y procesando imágenes..."):
+        pdf = BESCO_PDF()
+        pdf.add_page()
+        
+        pdf.add_custom_section("Información General")
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(0, 7, f"Cliente: {cliente} | Folio: {folio}", 0, 1)
+        f_ejec_str = fecha_ejecucion.strftime('%d/%m/%Y')
+        pdf.cell(0, 7, f"Fecha de Ejecución: {f_ejec_str} | Oficina: {oficina}", 0, 1)
+        if sucursal: pdf.cell(0, 7, f"Sucursal: {sucursal}", 0, 1)
+        pdf.set_font('Arial', 'B', 10)
+        pdf.cell(0, 7, f"ESTADO GLOBAL DE OPERACIÓN: {estado_op}/10", 0, 1)
+        pdf.cell(0, 7, f"Técnico: {tecnico} | Supervisor: {supervisor}", 0, 1)
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(0, 7, f"Servicio: {tipo_serv} ({referencia})", 0, 1); pdf.ln(5)
+
+        for eq in equipos_data:
+            if pdf.get_y() > 240: pdf.add_page()
+            pdf.add_custom_section(f"EQUIPO {eq['numero']}: {eq['esp']}")
+            
+            valid_meds = {k: v for k, v in eq['meds'].items() if v}
+            for k, v in valid_meds.items(): 
+                pdf.cell(60, 6, f"{k}:", 1)
+                pdf.cell(130, 6, f"{v}", 1, 1)
+            if eq['otros']: 
+                pdf.multi_cell(0, 6, f"Detalles: {eq['otros']}", 1)
+                
+            if eq['tag'] or eq['marca'] or eq['cap']: 
+                pdf.set_font('Arial', 'B', 9)
+                pdf.cell(0, 7, f"TAG: {eq['tag']} | Marca: {eq['marca']} | Cap: {eq['cap']}", 0, 1)
+                pdf.set_font('Arial', '', 10)
+                
+            if eq['com']: 
+                pdf.multi_cell(0, 6, f"Comentarios: {eq['com']}", 1)
+                
+            pdf.photo_grid(f"Antes (Eq. {eq['numero']})", eq['fa'], eq['numero'], "antes")
+            pdf.photo_grid(f"Después (Eq. {eq['numero']})", eq['fd'], eq['numero'], "despues")
+            pdf.ln(5)
+
+        df_c = df_mat.dropna(subset=["Descripción"])
+        if not df_c.empty:
+            if pdf.get_y() > 220: pdf.add_page()
+            pdf.add_custom_section("Materiales Utilizados")
+            pdf.set_font('Arial', 'B', 9); pdf.cell(30, 7, "CANT.", 1, 0, 'C'); pdf.cell(160, 7, "DESCRIPCIÓN", 1, 1, 'C'); pdf.set_font('Arial', '', 9)
+            for _, row in df_c.iterrows(): pdf.cell(30, 7, str(row["Cantidad"]), 1); pdf.cell(160, 7, str(row["Descripción"]), 1, 1)
+
+        fotos_folio = [f for f in archivos_folio if f.type in ["image/jpeg", "image/png"]]
+        if fotos_folio: pdf.folio_grid("FOLIO BESCO", fotos_folio)
+
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+
+        pdfs_folio = [f for f in archivos_folio if f.type == "application/pdf"]
+        if pdfs_folio:
+            merger = PdfWriter()
+            merger.append(io.BytesIO(pdf_bytes))
+            for p in pdfs_folio: merger.append(p)
+            out = io.BytesIO(); merger.write(out); pdf_bytes = out.getvalue()
+
+        nom_archivo = f"Reporte_BESCO_Damian_{cliente}_{folio}.pdf".replace(" ", "_")
+        
+        correo_enviado = enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nom_archivo, correos_extra, f_ejec_str, dest_oficina)
+        
+        if correo_enviado:
+            st.success(f"✅ Reporte enviado a {oficina} y listo para descargar.")
+        else:
+            st.warning("⚠️ El PDF se generó correctamente, pero hubo un error al enviarlo por correo. Puedes descargarlo aquí abajo:")
+        
+    st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name=nom_archivo, mime="application/pdf")
