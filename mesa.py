@@ -12,7 +12,6 @@ import uuid
 from pypdf import PdfWriter
 
 # --- RUTAS PARA LA NUBE (LOGOTIPO) ---
-# Apuntamos directamente a tu archivo exacto en GitHub
 LOGO_PATH = "logo.png"
 
 # --- CONFIGURACIÓN DE PÁGINA ---
@@ -40,21 +39,14 @@ class BESCO_PDF(FPDF):
                 temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
                 
-                # --- NUEVO: CÁLCULO MANUAL PARA MANTENER ASPECTO ---
-                # Obtenemos las dimensiones originales
+                # CÁLCULO MANUAL PARA MANTENER ASPECTO
                 orig_w, orig_h = img_logo.size
-                
-                # Definimos una altura objetivo (ej. 25 unidades de fpdf, usualmente mm)
                 final_h = 25
-                
-                # Calculamos el factor de escala y la anchura final
                 escala = final_h / orig_h
                 final_w = orig_w * escala
                 
-                # Dibujamos la imagen con anchura y altura calculadas
                 self.image(temp_logo, x=10, y=8, w=final_w, h=final_h)
             except Exception as e:
-                # Si algo falla, imprime un aviso en el PDF en lugar de colapsar la app
                 self.set_font('Arial', 'I', 8)
                 self.set_xy(10, 10)
                 self.cell(0, 10, f"(Error: No se pudo procesar logo.png)")
@@ -211,10 +203,17 @@ mapeo_correos = {
     "CDMX": ["gerardo.mendez@besco.mx"],
     "Ben & Company": ["gerardo.mendez@besco.mx"], "BX+": ["gerardo.mendez@besco.mx"], "Emerson": ["gerardo.mendez@besco.mx"], "Odoo": ["gerardo.mendez@besco.mx"]
 }
+
+# 1. Obtiene los correos regionales
 dest_oficina = mapeo_correos.get(oficina, ["gerardo.mendez@besco.mx"])
+
+# 2. Asegura que tú también lo recibas siempre (opcional, pero útil como respaldo)
 if "gerardo.mendez@besco.mx" not in dest_oficina: dest_oficina.append("gerardo.mendez@besco.mx")
 
-st.info(f"📧 Destinatarios: {', '.join(dest_oficina)}")
+# 3. --- REGLA ESTRICTA DE DAMIAN: Recibe TODOS los reportes ---
+if "damianaalducin@gmail.com" not in dest_oficina: dest_oficina.append("damianaalducin@gmail.com")
+
+st.info(f"📧 Destinatarios automáticos: {', '.join(dest_oficina)}")
 correos_extra = st.text_input("Correos adicionales (separados por coma)")
 
 if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
