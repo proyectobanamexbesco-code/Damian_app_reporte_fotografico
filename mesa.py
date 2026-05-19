@@ -12,13 +12,8 @@ import uuid
 from pypdf import PdfWriter
 
 # --- RUTAS PARA LA NUBE (LOGOTIPO) ---
-# Forzamos la búsqueda en minúsculas exactamente como está en tu GitHub
-LOGO_PATH = "logo"
-if not os.path.exists(LOGO_PATH):
-    for ext in [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]:
-        if os.path.exists(f"logo{ext}"):
-            LOGO_PATH = f"logo{ext}"
-            break
+# Ruta fija y directa con extensión para evitar errores de compatibilidad
+LOGO_PATH = "logo.jpg"
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BESCO | App Damian", layout="wide")
@@ -232,31 +227,3 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
             
         if eq['com']: 
             pdf.multi_cell(0, 6, f"Comentarios: {eq['com']}", 1)
-            
-        pdf.photo_grid(f"Antes (Eq. {eq['numero']})", eq['fa'], eq['numero'], "antes")
-        pdf.photo_grid(f"Después (Eq. {eq['numero']})", eq['fd'], eq['numero'], "despues")
-        pdf.ln(5)
-
-    df_c = df_mat.dropna(subset=["Descripción"])
-    if not df_c.empty:
-        if pdf.get_y() > 220: pdf.add_page()
-        pdf.add_custom_section("Materiales Utilizados")
-        pdf.set_font('Arial', 'B', 9); pdf.cell(30, 7, "CANT.", 1, 0, 'C'); pdf.cell(160, 7, "DESCRIPCIÓN", 1, 1, 'C'); pdf.set_font('Arial', '', 9)
-        for _, row in df_c.iterrows(): pdf.cell(30, 7, str(row["Cantidad"]), 1); pdf.cell(160, 7, str(row["Descripción"]), 1, 1)
-
-    fotos_folio = [f for f in archivos_folio if f.type in ["image/jpeg", "image/png"]]
-    if fotos_folio: pdf.folio_grid("FOLIO BESCO", fotos_folio)
-
-    pdf_bytes = pdf.output(dest='S').encode('latin-1')
-
-    pdfs_folio = [f for f in archivos_folio if f.type == "application/pdf"]
-    if pdfs_folio:
-        merger = PdfWriter()
-        merger.append(io.BytesIO(pdf_bytes))
-        for p in pdfs_folio: merger.append(p)
-        out = io.BytesIO(); merger.write(out); pdf_bytes = out.getvalue()
-
-    nom_archivo = f"Reporte_BESCO_Damian_{cliente}_{folio}.pdf".replace(" ", "_")
-    if enviar_correo(pdf_bytes, cliente, folio, sucursal, oficina, nom_archivo, correos_extra, f_ejec_str, dest_oficina):
-        st.success(f"✅ Reporte enviado a {oficina}")
-    st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name=nom_archivo, mime="application/pdf")
