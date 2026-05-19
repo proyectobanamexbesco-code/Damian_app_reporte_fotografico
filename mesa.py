@@ -12,7 +12,7 @@ import uuid
 from pypdf import PdfWriter
 
 # --- RUTAS PARA LA NUBE ---
-LOGO_PATH = "logo besco 2026.jpeg"
+LOGO_PATH = "logo"
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="BESCO | App Damian", layout="wide")
