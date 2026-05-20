@@ -32,14 +32,12 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        # BLINDAJE PARA PNG: Convertir a RGB puro
         if os.path.exists(LOGO_PATH):
             try:
                 img_logo = Image.open(LOGO_PATH).convert("RGB")
                 temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
                 
-                # CÁLCULO MANUAL PARA MANTENER ASPECTO
                 orig_w, orig_h = img_logo.size
                 final_h = 25
                 escala = final_h / orig_h
@@ -110,6 +108,11 @@ class BESCO_PDF(FPDF):
 
 def enviar_correo(pdf_bytes, cliente, folio, sucursal, nombre_archivo, correos_extra, fecha_ejec, lista_destinatarios):
     try:
+        # Validación de existencia de las llaves en Secrets
+        if "EMAIL_SENDER" not in st.secrets or "EMAIL_PASSWORD" not in st.secrets:
+            st.error("❌ Error de configuración: No se encontraron las claves 'EMAIL_SENDER' o 'EMAIL_PASSWORD' en los Secrets de Streamlit.")
+            return False
+
         remitente = st.secrets["EMAIL_SENDER"]
         password = st.secrets["EMAIL_PASSWORD"]
         destinatarios = list(set(lista_destinatarios + ([c.strip() for c in correos_extra.split(",")] if correos_extra else [])))
@@ -126,8 +129,8 @@ def enviar_correo(pdf_bytes, cliente, folio, sucursal, nombre_archivo, correos_e
             smtp.send_message(msg)
         return True
     except Exception as e:
-        st.error("❌ Ocurrió un problema al enviar el correo. Revise la configuración de sus contraseñas (Secrets).")
-        print(e)
+        # Imprime el error técnico real directamente en la interfaz para saber qué falla
+        st.error(f"❌ Error de conexión SMTP: {e}")
         return False
 
 # --- INTERFAZ ---
@@ -190,7 +193,6 @@ df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_
 st.markdown("---")
 st.subheader("5. Envío de Reporte")
 
-# Destinatario único y obligatorio solicitado
 dest_oficina = ["damianaalducin@gmail.com"]
 
 st.info(f"📧 Destinatario automático: {', '.join(dest_oficina)}")
