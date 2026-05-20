@@ -32,14 +32,12 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
-        # BLINDAJE PARA PNG: Convertir a RGB puro
         if os.path.exists(LOGO_PATH):
             try:
                 img_logo = Image.open(LOGO_PATH).convert("RGB")
                 temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
                 
-                # CÁLCULO MANUAL PARA MANTENER ASPECTO
                 orig_w, orig_h = img_logo.size
                 final_h = 25
                 escala = final_h / orig_h
@@ -193,10 +191,10 @@ df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_
 st.markdown("---")
 st.subheader("5. Envío de Reporte")
 
-# Lista fija con ambos correos obligatorios solicitados
-dest_oficina = ["damianaalducin@gmail.com", "gerardo.mendez@besco.mx"]
+# Lista fija con el correo obligatorio solicitado
+dest_oficina = ["damianaalducin@gmail.com"]
 
-st.info(f"📧 Destinatarios automáticos: {', '.join(dest_oficina)}")
+st.info(f"📧 Destinatario automático: {', '.join(dest_oficina)}")
 correos_extra = st.text_input("Correos adicionales (separados por coma)")
 
 if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
