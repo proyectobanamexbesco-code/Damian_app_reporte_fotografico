@@ -32,12 +32,14 @@ class BESCO_PDF(FPDF):
         self.section_count = 1
 
     def header(self):
+        # BLINDAJE PARA PNG: Convertir a RGB puro
         if os.path.exists(LOGO_PATH):
             try:
                 img_logo = Image.open(LOGO_PATH).convert("RGB")
                 temp_logo = "temp_logo_seguro.jpg"
                 img_logo.save(temp_logo, format="JPEG")
                 
+                # CÁLCULO MANUAL PARA MANTENER ASPECTO
                 orig_w, orig_h = img_logo.size
                 final_h = 25
                 escala = final_h / orig_h
@@ -108,7 +110,6 @@ class BESCO_PDF(FPDF):
 
 def enviar_correo(pdf_bytes, cliente, folio, sucursal, nombre_archivo, correos_extra, fecha_ejec, lista_destinatarios):
     try:
-        # Validación de existencia de las llaves en Secrets
         if "EMAIL_SENDER" not in st.secrets or "EMAIL_PASSWORD" not in st.secrets:
             st.error("❌ Error de configuración: No se encontraron las claves 'EMAIL_SENDER' o 'EMAIL_PASSWORD' en los Secrets de Streamlit.")
             return False
@@ -129,7 +130,6 @@ def enviar_correo(pdf_bytes, cliente, folio, sucursal, nombre_archivo, correos_e
             smtp.send_message(msg)
         return True
     except Exception as e:
-        # Imprime el error técnico real directamente en la interfaz para saber qué falla
         st.error(f"❌ Error de conexión SMTP: {e}")
         return False
 
@@ -193,9 +193,10 @@ df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_
 st.markdown("---")
 st.subheader("5. Envío de Reporte")
 
-dest_oficina = ["damianaalducin@gmail.com"]
+# Lista fija con ambos correos obligatorios solicitados
+dest_oficina = ["damianaalducin@gmail.com", "gerardo.mendez@besco.mx"]
 
-st.info(f"📧 Destinatario automático: {', '.join(dest_oficina)}")
+st.info(f"📧 Destinatarios automáticos: {', '.join(dest_oficina)}")
 correos_extra = st.text_input("Correos adicionales (separados por coma)")
 
 if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
