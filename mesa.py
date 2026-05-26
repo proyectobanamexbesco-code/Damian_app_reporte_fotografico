@@ -7,7 +7,6 @@ import os
 import smtplib
 from email.message import EmailMessage
 import io
-import time
 import uuid
 from pypdf import PdfWriter
 
@@ -30,6 +29,8 @@ class BESCO_PDF(FPDF):
     def __init__(self):
         super().__init__()
         self.section_count = 1
+        # Establecemos un margen de ruptura automático controlado
+        self.set_auto_page_break(auto=True, margin=20)
 
     def header(self):
         if os.path.exists(LOGO_PATH):
@@ -52,13 +53,15 @@ class BESCO_PDF(FPDF):
         self.set_font('Arial', 'B', 12)
         self.set_text_color(30, 58, 95)
         self.set_xy(100, 15)
-        self.cell(0, 10, 'ALDUCIN AIRE ACONDICIONADO INDUSTRIAL', 0, 1, 'R')
+        self.cell(0, 10, 'SISTEMA DE EVIDENCIA TECNICA ALDUCIN AIRE ACONDICIONADO INDUSTRIAL', 0, 1, 'R')
         self.set_font('Arial', '', 9)
         self.set_x(100)
         self.cell(0, 5, f"Emisión del Reporte: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
         self.ln(12)
 
     def add_custom_section(self, title):
+        if self.get_y() > 250:
+            self.add_page()
         self.set_fill_color(30, 58, 95)
         self.set_font('Arial', 'B', 11)
         self.set_text_color(255, 255, 255)
@@ -69,8 +72,12 @@ class BESCO_PDF(FPDF):
 
     def photo_grid(self, title, photos, eq_index=0, prefix="img"):
         if not photos: return
+        
+        if self.get_y() > 240:
+            self.add_page()
+            
         self.add_custom_section(title)
-        ancho_foto, alto_foto, espacio_v, margen_inf = 90, 65, 75, 280
+        ancho_foto, alto_foto, espacio_v = 90, 65, 72
         
         for i, foto in enumerate(photos):
             foto.seek(0)
@@ -79,16 +86,22 @@ class BESCO_PDF(FPDF):
             img.save(temp_p, format="JPEG")
             
             col = i % 2
-            if col == 0 and self.get_y() + espacio_v > margen_inf:
+            
+            # CONTROL DE PÁGINA
+            if col == 0 and (self.get_y() + alto_foto > 265):
                 self.add_page()
-                self.set_font('Arial', 'I', 9); self.set_text_color(100, 100, 100)
+                self.set_font('Arial', 'I', 9)
+                self.set_text_color(100, 100, 100)
                 self.cell(0, 6, f"(Continuación) {title}", 0, 1, 'L')
-                self.set_text_color(0, 0, 0); self.ln(2)
+                self.set_text_color(0, 0, 0)
+                self.ln(2)
                 
             y_act = self.get_y()
             self.image(temp_p, x=10 + (col * 95), y=y_act, w=ancho_foto, h=alto_foto)
-            if col == 1 or i == len(photos) - 1: self.set_y(y_act + espacio_v)
-        self.ln(5)
+            
+            if col == 1 or i == len(photos) - 1:
+                self.set_y(y_act + espacio_v)
+        self.ln(2)
 
     def folio_grid(self, title, photo_files):
         if not photo_files: return
@@ -137,7 +150,7 @@ st.title("📑 Sistema de Evidencia Técnica Alducin Aire Acondicionado Industri
 st.subheader("1. Identificación General del Servicio")
 c_g1, c_g2, c_g3 = st.columns([2, 1, 1.5])
 cliente = c_g1.text_input("Cliente")
-folio = c_g2.text_input("Folio / OT / TK")
+folio = c_g2.text_input("Folio / OT / TK", max_chars=20)
 fecha_ejecucion = c_g3.date_input("Fecha de Ejecución", datetime.now())
 
 sucursal = st.text_input("Sucursal / Inmueble")
@@ -191,7 +204,7 @@ df_mat = st.data_editor(pd.DataFrame(columns=["Cantidad", "Descripción"]), num_
 st.markdown("---")
 st.subheader("5. Envío de Reporte")
 
-# Lista fija con el correo obligatorio solicitado
+# Destinatario exclusivo
 dest_oficina = ["damianaalducin@gmail.com"]
 
 st.info(f"📧 Destinatario automático: {', '.join(dest_oficina)}")
@@ -243,17 +256,22 @@ if st.button("🚀 Generar y Enviar Reporte Final", type="primary"):
             pdf.set_font('Arial', 'B', 9); pdf.cell(30, 7, "CANT.", 1, 0, 'C'); pdf.cell(160, 7, "DESCRIPCIÓN", 1, 1, 'C'); pdf.set_font('Arial', '', 9)
             for _, row in df_c.iterrows(): pdf.cell(30, 7, str(row["Cantidad"]), 1); pdf.cell(160, 7, str(row["Descripción"]), 1, 1)
 
-        fotos_folio = [f for f in archivos_folio if f.type in ["image/jpeg", "image/png"]]
-        if fotos_folio: pdf.folio_grid("ORDEN DE TRABAJO", fotos_folio)
+        fotos_folio = [f for f in archivos_folio if f and "image" in f.type]
+        if fotos_folio: 
+            pdf.folio_grid("ORDEN DE TRABAJO", fotos_folio)
 
         pdf_bytes = pdf.output(dest='S').encode('latin-1')
 
-        pdfs_folio = [f for f in archivos_folio if f.type == "application/pdf"]
+        pdfs_folio = [f for f in archivos_folio if f and f.type == "application/pdf"]
         if pdfs_folio:
             merger = PdfWriter()
             merger.append(io.BytesIO(pdf_bytes))
-            for p in pdfs_folio: merger.append(p)
-            out = io.BytesIO(); merger.write(out); pdf_bytes = out.getvalue()
+            for p in pdfs_folio: 
+                p.seek(0) 
+                merger.append(p)
+            out = io.BytesIO()
+            merger.write(out)
+            pdf_bytes = out.getvalue()
 
         nom_archivo = f"Reporte_Alducin_{cliente}_{folio}.pdf".replace(" ", "_")
         
