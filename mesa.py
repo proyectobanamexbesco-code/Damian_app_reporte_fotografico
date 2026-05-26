@@ -29,7 +29,6 @@ class BESCO_PDF(FPDF):
     def __init__(self):
         super().__init__()
         self.section_count = 1
-        # Establecemos un margen de ruptura automático controlado
         self.set_auto_page_break(auto=True, margin=20)
 
     def header(self):
@@ -50,14 +49,22 @@ class BESCO_PDF(FPDF):
                 self.set_xy(10, 10)
                 self.cell(0, 10, f"(Error: No se pudo procesar logo.png)")
                 
-        self.set_font('Arial', 'B', 12)
+        # --- CORRECCIÓN DEL ENCABEZADO AMONTONADO ---
+        self.set_font('Arial', 'B', 11)
         self.set_text_color(30, 58, 95)
-        self.set_xy(100, 15)
-        self.cell(0, 10, 'SISTEMA DE EVIDENCIA TECNICA ALDUCIN AIRE ACONDICIONADO INDUSTRIAL', 0, 1, 'R')
+        # Movemos el texto más a la izquierda (x=60) y lo dividimos en dos líneas
+        self.set_xy(60, 10)
+        self.cell(0, 6, 'SISTEMA DE EVIDENCIA TÉCNICA', 0, 1, 'R')
+        self.set_x(60)
+        self.cell(0, 6, 'ALDUCIN AIRE ACONDICIONADO INDUSTRIAL', 0, 1, 'R')
+        
+        # Fecha de emisión
         self.set_font('Arial', '', 9)
-        self.set_x(100)
-        self.cell(0, 5, f"Emisión del Reporte: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
-        self.ln(12)
+        self.set_x(60)
+        self.cell(0, 6, f"Emisión del Reporte: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
+        
+        # Margen de respiro antes de la Sección 1
+        self.ln(12) 
 
     def add_custom_section(self, title):
         if self.get_y() > 250:
@@ -87,7 +94,6 @@ class BESCO_PDF(FPDF):
             
             col = i % 2
             
-            # CONTROL DE PÁGINA
             if col == 0 and (self.get_y() + alto_foto > 265):
                 self.add_page()
                 self.set_font('Arial', 'I', 9)
